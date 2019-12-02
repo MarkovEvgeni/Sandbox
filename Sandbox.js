@@ -5,7 +5,7 @@ if(usr != sessionStorage.getItem('who')){
   sessionStorage.setItem('validToken','');
 }
 document.getElementById('dial-call-btn').style.pointerEvents = 'none';
-var isValidToken = sessionStorage.getItem('validToken') || "true";
+var isValidToken = sessionStorage.getItem('validToken');
 var dialPhone = $j("#dial_phone").val() || '';
 var showLogin = $j("#show_login").val() || '0';
 var MAX_ALLOWED_TAB = 4;
@@ -23,7 +23,7 @@ var endCall = false;
 var locked = false;
 
 
-if(!window.top.InterMedia && !showSignIn){
+if(!window.top.InterMedia && !showSignIn && !isValidToken){
   loadLoginPage();
 }
 else{
@@ -766,7 +766,12 @@ function setTabsForCall(objCall, childTab) {
   try {
     switch (objCall.status) {
       case 'dialed':
-        setTabClass(childTab, 'incomingTab');
+        if(activeTab != objCall.callID){
+          setTabClass(childTab, 'incoming-inactive-tab');
+        }
+        else{
+          setTabClass(childTab, 'incomingTab');
+        }
         break;
       case 'calling':
       case "connecting":
@@ -866,16 +871,24 @@ function showErrorScreen(responseCode) {
 function dialNumber(phone){
   try{
     var calls = Object.keys(window.top.calls).length || 0;
-    if(calls < MAX_ALLOWED_TAB){
-      phone = phone || dialPhone;
-      phone = getPhoneDialFormat(phone);
-      $j('#dialPad').val(phone);
-      $j("#dialPad").change();
-      intiateCall();
-      dialPhone='';
-    }
-    else{
-      g_form.addErrorMessage("Intermedia maximum allowed call limit reached already.");
+    var proceed = true;
+    $j.each(Object.keys(window.top.calls), function(idx,target){
+      if(window.top.calls[target].status == 'dialed'){
+        proceed= false;
+      }
+    });
+    if(proceed){
+      if(calls < MAX_ALLOWED_TAB){
+        phone = phone || dialPhone;
+        phone = getPhoneDialFormat(phone);
+        $j('#dialPad').val(phone);
+        $j("#dialPad").change();
+        intiateCall();
+        dialPhone='';
+      }
+      else{
+        g_form.addErrorMessage("Intermedia maximum allowed call limit reached already.");
+      }
     }
   }
   catch(ex){
@@ -889,7 +902,7 @@ function updateDeviceList(devices) {
     if(!window.top.calls){
       window.top.calls = {};
     }
-    isValidToken = sessionStorage.getItem('validToken') || false;
+    isValidToken = sessionStorage.getItem('validToken');
     if(isValidToken == "true"){
       $j(".signIN").css('visibility','hidden');
     }
